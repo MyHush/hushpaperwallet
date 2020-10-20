@@ -68,16 +68,6 @@ fn main() {
         return;
     }
 
-    // Get the filename and output format
-    let filename = matches.value_of("output");
-    let format   = matches.value_of("format").unwrap();
-
-    // Writing to PDF requires a filename
-    if format == "pdf" && filename.is_none() {
-        eprintln!("Need an output file name when writing to PDF");
-        return;
-    }
-
     // Number of z addresses to generate
     let z_addresses = matches.value_of("z_addresses").unwrap().parse::<u32>().unwrap();    
 
