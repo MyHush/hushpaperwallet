@@ -47,8 +47,6 @@ pub fn double_sha256(payload: &[u8]) -> Vec<u8> {
 /// to get these values. 
 /// Usually these will be different for testnet and for mainnet.
 pub struct CoinParams {
-    pub taddress_version: [u8; 2],
-    pub tsecret_prefix  : [u8; 1],
     pub zaddress_prefix : String,
     pub zsecret_prefix  : String,
     pub zviewkey_prefix : String,
@@ -57,8 +55,6 @@ pub struct CoinParams {
 
 pub fn params() -> CoinParams {
         CoinParams {
-            taddress_version : [0x1C, 0xB8],
-            tsecret_prefix   : [0x80],
             zaddress_prefix  : "zs".to_string(),
             zsecret_prefix   : "secret-extended-key-main".to_string(),
             zviewkey_prefix  : "zviews".to_string(),
@@ -289,7 +285,7 @@ pub fn generate_vanity_wallet(num_threads: u32, prefix: String) -> Result<String
 }
 
 /// Generate a series of `count` addresses and private keys. 
-pub fn generate_wallet(nohd: bool, zcount: u32, tcount: u32, user_entropy: &[u8]) -> String {        
+pub fn generate_wallet(nohd: bool, zcount: u32, user_entropy: &[u8]) -> String {        
     // Get 32 bytes of system entropy
     let mut system_entropy:[u8; 32] = [0; 32]; 
     {
@@ -321,10 +317,10 @@ pub fn generate_wallet(nohd: bool, zcount: u32, tcount: u32, user_entropy: &[u8]
         let mut seed: [u8; 32] = [0; 32];
         rng.fill(&mut seed);
         
-        return gen_addresses_with_seed_as_json(zcount, tcount, |i| (seed.to_vec(), i));
+        return gen_addresses_with_seed_as_json(zcount, |i| (seed.to_vec(), i));
     } else {
         // Not using HD addresses, so derive a new seed every time    
-        return gen_addresses_with_seed_as_json(zcount, tcount, |_| {            
+        return gen_addresses_with_seed_as_json(zcount, |_| {            
             let mut seed:[u8; 32] = [0; 32]; 
             rng.fill(&mut seed);
             
@@ -341,7 +337,7 @@ pub fn generate_wallet(nohd: bool, zcount: u32, tcount: u32, user_entropy: &[u8]
 /// get_seed is a closure that will take the address number being derived, and return a tuple cointaining the 
 /// seed and child number to use to derive this wallet. 
 /// It is useful if we want to reuse (or not) the seed across multiple wallets.
-fn gen_addresses_with_seed_as_json<F>(zcount: u32, tcount: u32, mut get_seed: F) -> String 
+fn gen_addresses_with_seed_as_json<F>(zcount: u32, mut get_seed: F) -> String 
     where F: FnMut(u32) -> (Vec<u8>, u32)
 {
     let mut ans = array![];
@@ -364,53 +360,7 @@ fn gen_addresses_with_seed_as_json<F>(zcount: u32, tcount: u32, mut get_seed: F)
         }).unwrap(); 
     }      
 
-    // Next generate the T addresses
-    // derive a RNG from the seed
-    let mut rng = ChaChaRng::from_seed(rng_seed);
-
-    for i in 0..tcount {        
-        let (addr, pk_wif) = get_taddress(&mut rng);
-
-        ans.push(object!{
-            "num"               => i,
-            "address"           => addr,
-            "private_key"       => pk_wif,
-            "type"              => "taddr"
-        }).unwrap();
-    }
-
     return json::stringify_pretty(ans, 2);
-}
-
-/// Generate a t address
-fn get_taddress(rng: &mut ChaChaRng) -> (String, String) {
-//    use secp256k1;
-    use ripemd160::{Ripemd160};
-
-    let mut sk_bytes: [u8; 32] = [0;32];
-
-    // There's a small chance the generated private key bytes are invalid, so
-    // we loop till we find bytes that are
-    let sk = loop {    
-        rng.fill(&mut sk_bytes);
-
-        match secp256k1::SecretKey::parse(&sk_bytes) {
-            Ok(s)  => break s,
-            Err(_) => continue
-        }
-    };
-    
-    let pubkey = secp256k1::PublicKey::from_secret_key(&sk);
-
-    // Address 
-    let mut hash160 = Ripemd160::new();
-    hash160.input(sha2::Sha256::digest(&pubkey.serialize_compressed().to_vec()));
-    let addr = hash160.result().to_base58check(&params().taddress_version, &[]);
-
-    // Private Key
-    let pk_wif = sk_bytes.to_base58check(&params().tsecret_prefix, &[0x01]);  
-
-    return (addr, pk_wif);
 }
 
 /// Generate a standard ZIP-32 address from the given seed at 32'/44'/0'/index

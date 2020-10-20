@@ -1,7 +1,5 @@
 extern crate printpdf;
 
-use crate::paper::params;
-
 use qrcode::QrCode;
 use qrcode::types::Color;
 
@@ -44,7 +42,6 @@ pub fn save_to_pdf(addresses: &str, filename: &str) -> Result<(), String> {
 
         let address  = kv["address"].as_str().unwrap();
         let pk       = kv["private_key"].as_str().unwrap();
-        let is_taddr = !address.starts_with(&params().zaddress_prefix);
 
         let (seed, hdpath) = if kv["type"].as_str().unwrap() == "zaddr" && kv.contains("seed") {
             (kv["seed"]["HDSeed"].as_str().unwrap(), kv["seed"]["path"].as_str().unwrap())
@@ -53,8 +50,8 @@ pub fn save_to_pdf(addresses: &str, filename: &str) -> Result<(), String> {
         };
 
         // Add address + private key
-        add_address_to_page(&current_layer, &font, &font_bold, address, is_taddr, pos);
-        add_pk_to_page(&current_layer, &font, &font_bold, pk, address, is_taddr, seed, hdpath, pos);
+        add_address_to_page(&current_layer, &font, &font_bold, address, pos);
+        add_pk_to_page(&current_layer, &font, &font_bold, pk, address, seed, hdpath, pos);
  
         let line1 = Line {
             points: vec![(Point::new(Mm(5.0), Mm(98.0)), false), (Point::new(Mm(205.0), Mm(98.0)), false)],
@@ -151,12 +148,12 @@ fn add_footer_to_page(current_layer: &PdfLayerReference, font: &IndirectFontRef,
 /**
  * Add the address section to the PDF at `pos`. Note that each page can fit only 2 wallets, so pos has to effectively be either 0 or 1.
  */
-fn add_address_to_page(current_layer: &PdfLayerReference, font: &IndirectFontRef, font_bold: &IndirectFontRef, address: &str, is_taddr: bool, pos: u32) {
-    let (scaledimg, finalsize) = qrcode_scaled(address, if is_taddr {13} else {10});
+fn add_address_to_page(current_layer: &PdfLayerReference, font: &IndirectFontRef, font_bold: &IndirectFontRef, address: &str, pos: u32) {
+    let (scaledimg, finalsize) = qrcode_scaled(address, 10);
 
     //         page_height  top_margin  vertical_padding  position               
     let ypos = 297.0        - 5.0       - 77.0            - (140.0 * pos as f64);
-    let title = if is_taddr {"T Address"} else {"HUSH Address"};
+    let title = "HUSH Address";
 
     add_address_at(current_layer, font, font_bold, title, address, &scaledimg, finalsize, ypos);
 }
@@ -174,11 +171,11 @@ fn add_address_at(current_layer: &PdfLayerReference, font: &IndirectFontRef, fon
 /**
  * Add the private key section to the PDF at `pos`, which can effectively be only 0 or 1.
  */
-fn add_pk_to_page(current_layer: &PdfLayerReference, font: &IndirectFontRef, font_bold: &IndirectFontRef, pk: &str, address: &str, is_taddr: bool, seed: &str, path: &str, pos: u32) {
+fn add_pk_to_page(current_layer: &PdfLayerReference, font: &IndirectFontRef, font_bold: &IndirectFontRef, pk: &str, address: &str, seed: &str, path: &str, pos: u32) {
     //         page_height  top_margin  vertical_padding  position               
     let ypos = 297.0        - 5.0       - 242.0           - (140.0 * pos as f64);
     
-    let (scaledimg, finalsize) = qrcode_scaled(pk, if is_taddr {20} else {10});
+    let (scaledimg, finalsize) = qrcode_scaled(pk,10);
 
     add_qrcode_image_to_page(current_layer, &scaledimg, finalsize, Mm(145.0), Mm(ypos-17.5));
 
@@ -189,7 +186,7 @@ fn add_pk_to_page(current_layer: &PdfLayerReference, font: &IndirectFontRef, fon
     }
 
     // Add the address a second time below the private key
-    let title = if is_taddr {"T Address"} else {"HUSH Address"};
+    let title = "HUSH Address";
     current_layer.use_text(title, 12, Mm(10.0), Mm(ypos-10.0), &font_bold);    
     let strs = split_to_max(&address, 39, 39);  // No spaces, so user can copy the address
     for i in 0..strs.len() {

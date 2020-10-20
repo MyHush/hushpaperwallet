@@ -44,16 +44,6 @@ fn main() {
                 .help("Number of threads to use for the vanity address generator. Set this to the number of CPUs you have")
                 .takes_value(true)
                 .default_value("1"))
-        .arg(Arg::with_name("t_addresses")
-                .short("t")
-                .long("taddrs")
-                .help("Numbe rof T addresses to generate")
-                .takes_value(true)
-                .default_value("0")
-                .validator(|i:String| match i.parse::<i32>() {
-                        Ok(_)   => return Ok(()),
-                        Err(_)  => return Err(format!("Number of addresses '{}' is not a number", i))
-                }))
         .arg(Arg::with_name("z_addresses")
                 .short("z")
                 .long("zaddrs")
@@ -88,20 +78,12 @@ fn main() {
         return;
     }
 
-    // Number of t addresses to generate
-    let t_addresses = matches.value_of("t_addresses").unwrap().parse::<u32>().unwrap();    
-
     // Number of z addresses to generate
     let z_addresses = matches.value_of("z_addresses").unwrap().parse::<u32>().unwrap();    
 
     let addresses = if !matches.value_of("vanity_prefix").is_none() {
         if z_addresses != 1 {
             eprintln!("Can only generate 1 zaddress in vanity mode. You specified {}", z_addresses);
-            return;
-        }
-
-        if t_addresses != 0 {
-            eprintln!("Can't generate vanity t-addressses yet");
             return;
         }
 
@@ -136,9 +118,9 @@ fn main() {
             entropy.extend(matches.value_of("entropy").unwrap().as_bytes());
         }
 
-        print!("Generating {} Sapling addresses and {} Transparent addresses...", z_addresses, t_addresses);
+        print!("Generating {} Sapling addresses.", z_addresses);
         io::stdout().flush().ok();
-        let addresses = generate_wallet(nohd, z_addresses, t_addresses, &entropy); 
+        let addresses = generate_wallet(nohd, z_addresses, &entropy); 
         println!("[OK]");
 
         addresses
