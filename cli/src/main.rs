@@ -73,14 +73,14 @@ fn main() {
 
     let addresses = if !matches.value_of("vanity_prefix").is_none() {
         if z_addresses != 1 {
-            eprintln!("Can only generate 1 zaddress in vanity mode. You specified {}", z_addresses);
+            eprintln!("Can only generate 1 Z address in vanity mode. You specified {}", z_addresses);
             return;
         }
 
         let num_threads = matches.value_of("threads").unwrap().parse::<u32>().unwrap();
 
         let prefix = matches.value_of("vanity_prefix").unwrap().to_string();
-        println!("Generating address starting with \"{}\"", prefix);
+        println!("Generating Z address starting with \"{}\"", prefix);
         let addresses = match generate_vanity_wallet(num_threads, prefix) {
             Ok(w) => w,
             Err(e) => {
@@ -108,7 +108,7 @@ fn main() {
             entropy.extend(matches.value_of("entropy").unwrap().as_bytes());
         }
 
-        print!("Generating {} Sapling addresses.", z_addresses);
+        print!("Generating {} Z addresses (Sapling). ", z_addresses);
         io::stdout().flush().ok();
         let addresses = generate_wallet(nohd, z_addresses, &entropy); 
         println!("[OK]");
@@ -126,7 +126,7 @@ fn main() {
         }
     } else if format == "pdf" {
         // We already know the output file name was specified
-        print!("Writing {:?} as a PDF file...", filename.unwrap());
+        print!("Writing {:?} as a PDF file. ", filename.unwrap());
         io::stdout().flush().ok();
         match pdf::save_to_pdf(&addresses, filename.unwrap()) {
             Ok(_)   => { println!("[OK]");},
